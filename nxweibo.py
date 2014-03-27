@@ -15,13 +15,12 @@ client = APIClient(app_key = config.weiboAppKey, app_secret = config.weiboAppSec
 def index():
   code = request.query.code
   if not code:
-    # redirect('/token')
     return template('index.tpl')
   r = client.request_access_token(code)
   access_token = r.access_token 
   expires_in = r.expires_in
   client.set_access_token(access_token, expires_in)
-  return access_token
+  return template('accesstoken.tpl', accesstoken = access_token)  
 
 @route('/token')
 def token():
@@ -30,6 +29,9 @@ def token():
 
 @route('/home_timeline')
 def hometimeline():
+  if not client.access_token:
+    redirect('/token', 302)
+
   f = open('home_timeline.csv', 'wb')
   wr = csv.writer(f)
     
@@ -44,6 +46,9 @@ def hometimeline():
 
 @route('/weibocr')
 def weibocr():
+  if not client.access_token:
+    redirect('/token', 302)
+
   l = len(request.query)
   if l == 0:
     return template('weibocr.tpl')
@@ -56,7 +61,7 @@ def weibocr():
   f = open('output_comments.csv', 'wb')
   wr = csv.writer(f)
   pageCount = 200
-  
+
   for i in xrange(1, commentsCount / pageCount + 2):
       if i == 11:
           break
