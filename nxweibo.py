@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import config
+from config import *
 
-from bottle import route, run, request, redirect, template, static_file
-from weibo import APIClient
+from bottle import Bottle, route, run, request, redirect, template, static_file
+from vendor.weibo import APIClient
 import urllib2
 import csv
 import codecs
 
-client = APIClient(app_key = config.weiboAppKey, app_secret = config.weiboAppSecret, redirect_uri = config.weiboCallBackURL)
+client = APIClient(app_key = weiboAppKey, app_secret = weiboAppSecret, redirect_uri = weiboCallBackURL)
 weiboUserID = 0
 
 @route('/')
@@ -157,4 +157,7 @@ def weiboLink2ID(weiboLink):
   return result
 
 # Run Server
-run(host = 'localhost', port = 7777, reloader = True, debug = True)
+if __name__ == '__main__':
+  run(host = 'localhost', port = 7777, reloader = True, debug = True)
+
+app = Bottle()
