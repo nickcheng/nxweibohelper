@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from config import *
-
+import bottle
 from bottle import Bottle, route, run, request, redirect, template, static_file
 from vendor.weibo import APIClient
 import urllib2
@@ -160,4 +160,4 @@ def weiboLink2ID(weiboLink):
 if __name__ == '__main__':
   run(host = 'localhost', port = 7777, reloader = True, debug = True)
 
-app = Bottle()
+app = bottle.default_app()
