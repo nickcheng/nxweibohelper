@@ -1,5 +1,5 @@
 % include('header.tpl', params = params)
 
 <hr />
-<a href='/downloadcomments'>Download Comments</a><br />
-<a href='/downloadreposts'>Download Reposts</a><br />
+<a href='/download{{'?fn='+params['commentsfilename']}}'>Download Comments: {{params['commentsfilename']}}</a><br />
+<a href='/download{{'?fn='+params['repostsfilename']}}'>Download Reposts: {{params['repostsfilename']}}</a><br />

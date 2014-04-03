@@ -8,6 +8,8 @@ from vendor.weibo import APIClient
 import urllib2
 import csv
 import codecs
+import time
+import datetime
 
 client = APIClient(app_key = weiboAppKey, app_secret = weiboAppSecret, redirect_uri = weiboCallBackURL)
 # weiboUserID = 0
@@ -18,6 +20,12 @@ def preprocess(request):
     'userid': request.query.userid or ''
   }
   return params
+
+def timestamp():
+  ts = repr(time.time())
+  dt = datetime.datetime.fromtimestamp(time.mktime(time.gmtime())).strftime("%Y%m%d%H%M%S")
+  result = dt+'_'+ts
+  return result
 
 @route('/')
 def index():
@@ -43,7 +51,8 @@ def hometimeline():
   if not params['accesstoken']:
     redirect('/token', 302)
 
-  f = open('home_timeline.csv', 'wb')
+  fn = 'home_timeline' + '_' + params['userid'] + '_' + timestamp() + '.csv'
+  f = open(fn, 'wb')
   wr = csv.writer(f)
     
   for i in xrange(1, 41):
@@ -53,7 +62,7 @@ def hometimeline():
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
 
   f.close()
-  return static_file('home_timeline.csv', root='./', download='home_timeline.csv')
+  return static_file(fn, root='./', download=fn)
 
 @route('/user_timeline')
 def usertimeline():
@@ -62,7 +71,8 @@ def usertimeline():
   if not params['accesstoken']:
     redirect('/token', 302)
 
-  f = open('user_timeline.csv', 'wb')
+  fn = 'user_timeline' + '_' + params['userid'] + '_' + timestamp() + '.csv'
+  f = open(fn, 'wb')
   wr = csv.writer(f)
     
   for i in xrange(1, 41):
@@ -73,7 +83,7 @@ def usertimeline():
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
 
   f.close()
-  return static_file('user_timeline.csv', root='./', download = 'user_timeline.csv')
+  return static_file(fn, root='./', download = fn)
   
 
 @route('/weibocr')
@@ -96,7 +106,8 @@ def weibocr():
   commentsCount = c[0].comments
   repostsCount = c[0].reposts
 
-  f = open('output_comments.csv', 'wb')
+  fn1 = 'output_comments' + '_' + weiboID + '_' + timestamp() + '.csv'
+  f = open(fn1, 'wb')
   wr = csv.writer(f)
   pageCount = 200
 
@@ -110,7 +121,8 @@ def weibocr():
           wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in commentsList])
   f.close()
     
-  f2 = open('output_reposts.csv', 'wb')
+  fn2 = 'output_reposts' + '_' + weiboID + '_' + timestamp() + '.csv'
+  f2 = open(fn2, 'wb')
   wr2 = csv.writer(f2)
 
   for i in xrange(1, repostsCount / pageCount + 2):
@@ -123,15 +135,14 @@ def weibocr():
           wr2.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in repostsList])
   f2.close()
 
+  params['commentsfilename'] = fn1
+  params['repostsfilename'] = fn2
   return template('weibocr_download.tpl', params = params)
 
-@route('/downloadcomments')
-def downloadcomments():
-  return static_file('output_comments.csv', root='./', download='output_comments.csv')
-
-@route('/downloadreposts')
-def downloadreposts():
-  return static_file('output_reposts.csv', root='./', download='output_reposts.csv')
+@route('/download')
+def download():
+  fn = request.query.fn
+  return static_file(fn, root='./', download=fn)
 
 @route('/weibogo')
 def weibogo():
