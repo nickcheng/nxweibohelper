@@ -67,7 +67,7 @@ def usertimeline():
     
   for i in xrange(1, 21):
     print 'Page',i
-    r = client.statuses.friends_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], uid = params['userid'], page = i, count = 100)
+    r = client.statuses.user_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], uid = params['userid'], page = i, count = 100)
     for st in r.statuses:
       statusList = [st.id, st.user.screen_name, st.text, st.created_at, st.comments_count, st.reposts_count, st.attitudes_count];
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
