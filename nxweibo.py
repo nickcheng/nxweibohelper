@@ -10,20 +10,26 @@ import csv
 import codecs
 
 client = APIClient(app_key = weiboAppKey, app_secret = weiboAppSecret, redirect_uri = weiboCallBackURL)
-weiboUserID = 0
+# weiboUserID = 0
+
+def preprocess(request):
+  params = {
+    'accesstoken': request.query.accesstoken or '',
+    'userid': request.query.userid or ''
+  }
+  return params
 
 @route('/')
 def index():
+  params = preprocess(request)
+  #
   code = request.query.code
-  if not code:
-    return template('index.tpl')
-  r = client.request_access_token(code)
-  access_token = r.access_token 
-  expires_in = r.expires_in
-  global weiboUserID
-  weiboUserID = r.uid
-  client.set_access_token(access_token, expires_in)
-  return template('accesstoken.tpl', accesstoken = access_token)  
+  if code:
+    r = client.request_access_token(code)
+    params['accesstoken'] = r.access_token
+    params['userid'] = str(r.uid)
+
+  return template('index.tpl', params = params)
 
 @route('/token')
 def token():
@@ -32,14 +38,16 @@ def token():
 
 @route('/home_timeline')
 def hometimeline():
-  if not client.access_token:
+  params = preprocess(request)
+  #
+  if not params['accesstoken']:
     redirect('/token', 302)
 
   f = open('home_timeline.csv', 'wb')
   wr = csv.writer(f)
     
   for i in xrange(1, 21):
-    r = client.statuses.home_timeline.get(page = i, count = 100)
+    r = client.statuses.home_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], page = i, count = 100)
     for st in r.statuses:
       statusList = [st.id, st.user.screen_name, st.text, st.created_at, st.comments_count, st.reposts_count, st.attitudes_count];
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
@@ -49,14 +57,17 @@ def hometimeline():
 
 @route('/user_timeline')
 def usertimeline():
-  if not client.access_token:
+  params = preprocess(request)
+  #
+  if not params['accesstoken']:
     redirect('/token', 302)
 
   f = open('user_timeline.csv', 'wb')
   wr = csv.writer(f)
     
   for i in xrange(1, 21):
-    r = client.statuses.user_timeline.get(uid = weiboUserID, page = i, count = 100)
+    print 'Page',i
+    r = client.statuses.friends_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], uid = params['userid'], page = i, count = 100)
     for st in r.statuses:
       statusList = [st.id, st.user.screen_name, st.text, st.created_at, st.comments_count, st.reposts_count, st.attitudes_count];
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
@@ -67,20 +78,21 @@ def usertimeline():
 
 @route('/weibocr')
 def weibocr():
-  if not client.access_token:
+  params = preprocess(request)
+  #
+  if not params['accesstoken']:
     redirect('/token', 302)
-
-  l = len(request.query)
-  if l == 0:
-    return template('weibocr.tpl')
 
   weiboID = 0
   if request.query.id:
     weiboID = request.query.id
+  elif request.query.link:
+    weiboID = weiboLink2ID(request.query.link, params)
   else:
-    weiboID = weiboLink2ID(request.query.link)
+    return template('weibocr.tpl', params = params)
+
   print weiboID
-  c = client.statuses.count.get(ids = weiboID)
+  c = client.statuses.count.get(source = weiboAppKey, access_token = params['accesstoken'], ids = weiboID)
   commentsCount = c[0].comments
   repostsCount = c[0].reposts
 
@@ -92,7 +104,7 @@ def weibocr():
       if i == 11:
           break
       print 'Page',i
-      cr = client.comments.show.get(id=weiboID, page=i, count = pageCount)
+      cr = client.comments.show.get(source = weiboAppKey, access_token = params['accesstoken'], id=weiboID, page=i, count = pageCount)
       for st in cr.comments:
           commentsList = [st.id, st.text, st.created_at, st.source, st.user.id, st.user.name, st.user.gender, st.user.location, st.user.followers_count];
           wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in commentsList])
@@ -105,44 +117,45 @@ def weibocr():
       if i == 11:
           break
       print 'Page',i
-      rr = client.statuses.repost_timeline.get(id=weiboID, page=i, count = pageCount)
+      rr = client.statuses.repost_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], id=weiboID, page=i, count = pageCount)
       for st in rr.reposts:
           repostsList = [st.id, st.text, st.created_at, st.source, st.user.id, st.user.name, st.user.gender, st.user.location, st.user.followers_count];
           wr2.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in repostsList])
   f2.close()
 
-  return template('weibocr_download.tpl')
+  return template('weibocr_download.tpl', params = params)
 
 @route('/downloadcomments')
 def downloadcomments():
-  return static_file('output_comments.csv', root='./')
+  return static_file('output_comments.csv', root='./', download='output_comments.csv')
 
 @route('/downloadreposts')
 def downloadreposts():
-  return static_file('output_reposts.csv', root='./')
+  return static_file('output_reposts.csv', root='./', download='output_reposts.csv')
 
 @route('/weibogo')
 def weibogo():
-  if not client.access_token:
+  params = preprocess(request)
+  #
+  if not params['accesstoken']:
     redirect('/token', 302)
 
-  l = len(request.query)
-  if l == 0:
-    return template('weibogo.tpl')
-
   weiboID = request.query.id
-  url = weiboID2URL(weiboID)
+  if not weiboID:
+    return template('weibogo.tpl', params = params)
+
+  url = weiboID2URL(weiboID, params)
 
   redirect(url)
 
-def weiboID2URL(weiboID):
-  cr = client.statuses.show.get(id = weiboID)
+def weiboID2URL(weiboID, params):
+  cr = client.statuses.show.get(source = weiboAppKey, access_token = params['accesstoken'], id = weiboID)
   userID = cr.user.id
-  cr2 = client.statuses.querymid.get(id = weiboID, type = 1)
+  cr2 = client.statuses.querymid.get(source = weiboAppKey, access_token = params['accesstoken'], id = weiboID, type = 1)
   url = 'http://weibo.com/%s/%s' % (userID, cr2.mid)
   return url
 
-def weiboLink2ID(weiboLink):
+def weiboLink2ID(weiboLink, params):
   #http://weibo.com/1655001967/AD2k2fhs3?mod=weibotime
   ss = weiboLink
   a = ss.find('weibo.com/')
@@ -151,7 +164,7 @@ def weiboLink2ID(weiboLink):
   mid = ss[begin:] if end < 0 else ss[begin:end]
 
   #
-  cr = client.statuses.queryid.get(mid = mid, type = 1, isBase62 = 1)
+  cr = client.statuses.queryid.get(source = weiboAppKey, access_token = params['accesstoken'], mid = mid, type = 1, isBase62 = 1)
   result = cr.id
 
   return result
