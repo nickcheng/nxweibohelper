@@ -46,14 +46,14 @@ def hometimeline():
   f = open('home_timeline.csv', 'wb')
   wr = csv.writer(f)
     
-  for i in xrange(1, 21):
-    r = client.statuses.home_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], page = i, count = 100)
+  for i in xrange(1, 41):
+    r = client.statuses.home_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], page = i, count = 50)
     for st in r.statuses:
       statusList = [st.id, st.user.screen_name, st.text, st.created_at, st.comments_count, st.reposts_count, st.attitudes_count];
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
 
   f.close()
-  return static_file('home_timeline.csv', root='./')
+  return static_file('home_timeline.csv', root='./', download='home_timeline.csv')
 
 @route('/user_timeline')
 def usertimeline():
@@ -65,15 +65,15 @@ def usertimeline():
   f = open('user_timeline.csv', 'wb')
   wr = csv.writer(f)
     
-  for i in xrange(1, 21):
+  for i in xrange(1, 41):
     print 'Page',i
-    r = client.statuses.user_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], uid = params['userid'], page = i, count = 100)
+    r = client.statuses.user_timeline.get(source = weiboAppKey, access_token = params['accesstoken'], uid = params['userid'], page = i, count = 50)
     for st in r.statuses:
       statusList = [st.id, st.user.screen_name, st.text, st.created_at, st.comments_count, st.reposts_count, st.attitudes_count];
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
 
   f.close()
-  return static_file('user_timeline.csv', root='./')
+  return static_file('user_timeline.csv', root='./', download = 'user_timeline.csv')
   
 
 @route('/weibocr')
