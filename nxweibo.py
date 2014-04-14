@@ -10,9 +10,9 @@ import csv
 import codecs
 import time
 import datetime
+import os
 
 client = APIClient(app_key = weiboAppKey, app_secret = weiboAppSecret, redirect_uri = weiboCallBackURL)
-# weiboUserID = 0
 
 def preprocess(request):
   params = {
@@ -23,20 +23,34 @@ def preprocess(request):
 
 def timestamp():
   ts = repr(time.time())
-  dt = datetime.datetime.fromtimestamp(time.mktime(time.gmtime())).strftime("%Y%m%d%H%M%S")
-  result = dt+'_'+ts
+  dt = datetime.datetime.fromtimestamp(time.mktime(time.gmtime())).strftime('%Y%m%d%H%M%S')
+  result = dt + '_' + ts
   return result
+
+def getCSVFiles():
+  curPath = os.getcwd()
+  fileList = os.listdir(curPath)
+  csvFiles = []
+  for f in fileList:
+    if f.endswith('.csv'):
+      csvFiles.append(os.path.join(curPath, f))
+
+  return sorted(csvFiles)
 
 @route('/')
 def index():
   params = preprocess(request)
-  #
+
+  # Code -> Token
   code = request.query.code
   if code:
     r = client.request_access_token(code)
     params['accesstoken'] = r.access_token
     params['userid'] = str(r.uid)
 
+  # Get files in folder
+  params['csv'] = getCSVFiles()
+  
   return template('index.tpl', params = params)
 
 @route('/token')
@@ -62,7 +76,7 @@ def hometimeline():
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
 
   f.close()
-  return static_file(fn, root='./', download=fn)
+  return static_file(fn, root = './', download = fn)
 
 @route('/user_timeline')
 def usertimeline():
@@ -83,8 +97,7 @@ def usertimeline():
       wr.writerow([(isinstance(v,unicode) and v.encode('utf8') or v) for v in statusList])
 
   f.close()
-  return static_file(fn, root='./', download = fn)
-  
+  return static_file(fn, root = './', download = fn)
 
 @route('/weibocr')
 def weibocr():
@@ -142,7 +155,7 @@ def weibocr():
 @route('/download')
 def download():
   fn = request.query.fn
-  return static_file(fn, root='./', download=fn)
+  return static_file(fn, root = './', download = fn)
 
 @route('/weibogo')
 def weibogo():
